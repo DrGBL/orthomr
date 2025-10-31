@@ -7,7 +7,7 @@ Orthogonal polynomials for non-linear Mendelian randomization.
 You can install the development version of orthomr from GitHub:
 ``` r
 # install.packages("devtools")
-devtools::install_github("DrGBL/orthomr")
+remotes::install_github("DrGBL/orthomr")
 ```
 
 ## Example
