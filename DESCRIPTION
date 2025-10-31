@@ -1,0 +1,22 @@
+Package: orthomr
+Title: Orthogonal Polynomials for Non-Linear Mendelian Randomization
+Version: 0.0.0.9000
+Authors@R: 
+    person("Guillaume Butler-Laporte", email = "guillaume.butler-laporte@mcgill.ca", role = c("aut", "cre"))
+Description: More to come.
+License: GPL (>= 3)
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+Imports:
+    dplyr,
+    stringr,
+    ggplot2,
+    rlang,
+    TwoSampleMR,
+    MVMR,
+    polynom,
+    GGally,
+    ggpubr
+Suggests:
+    DRMR

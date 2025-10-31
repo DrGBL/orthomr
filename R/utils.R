@@ -1,0 +1,25 @@
+# Avoid NSE notes in R CMD check
+utils::globalVariables(c(
+  "exposure",
+  "id.exposure",
+  "SNP",
+  "pval.exposure",
+  "min_pval",
+  "pval",
+  "ins",
+  "se",
+  "af",
+  "beta",
+  "Y_predicted",
+  "degree_int",
+  "keep_deg",
+  "tmp",
+  "pred_group",
+  "x",
+  "y",
+  "X",
+  "Y",
+  ".",
+  "X_true",
+  "error"
+))
