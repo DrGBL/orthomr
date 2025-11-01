@@ -4,23 +4,23 @@
 \alias{predict_mvmr}
 \title{Predict Using MVMR Polynomial Coefficients}
 \usage{
-predict_mvmr(X, XYcoeff)
+predict_mvmr(exposure_values, polynomial_coefficients)
 }
 \arguments{
-\item{X}{Numeric vector. Exposure values.}
+\item{exposure_values}{Numeric vector. Exposure values.}
 
-\item{XYcoeff}{List. Polynomial coefficients from \code{obtain_final_coeffs()}.}
+\item{polynomial_coefficients}{List. Polynomial coefficients from \code{obtain_final_coeffs()}.}
 }
 \value{
-Numeric vector of predicted Y values.
+Numeric vector of predicted outcome values.
 }
 \description{
-Given exposure values X and polynomial coefficients from MVMR, predicts
-the outcome Y.
+Given exposure values and polynomial coefficients from MVMR, predicts
+the outcome values.
 }
 \examples{
 \dontrun{
-X_new <- seq(-3, 3, 0.1)
-Y_pred <- predict_mvmr(X_new, final_coef)
+exposure_new <- seq(-3, 3, 0.1)
+outcome_predicted <- predict_mvmr(exposure_new, final_coefficients)
 }
 }

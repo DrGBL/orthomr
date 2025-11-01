@@ -4,11 +4,11 @@
 \alias{merge_exp_inst}
 \title{Merge Exposure Instruments}
 \usage{
-merge_exp_inst(gwas_exp)
+merge_exp_inst(gwas_exposure_list)
 }
 \arguments{
-\item{gwas_exp}{List of data frames. Each data frame should contain columns:
-ins, beta, se, pval, af.}
+\item{gwas_exposure_list}{List of data frames. Each data frame should contain columns:
+instrument_id, beta, se, pval, allele_freq.}
 }
 \value{
 A data frame with merged instruments in TwoSampleMR format with columns:
@@ -22,6 +22,6 @@ GWAS, merges them, and removes duplicates.
 \examples{
 \dontrun{
 gwas_list <- list(gwas1, gwas2, gwas3)
-merged_inst <- merge_exp_inst(gwas_list)
+merged_instruments <- merge_exp_inst(gwas_list)
 }
 }

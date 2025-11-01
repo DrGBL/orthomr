@@ -1,0 +1,183 @@
+---
+title: "Getting Started with orthomr"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting Started with orthomr}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+```{r setup}
+library(orthomr)
+library(polynom)
+library(dplyr)
+```
+
+## Introduction
+
+The `orthomr` package provides tools for non-linear Mendelian randomization using orthogonal polynomials in a multivariable MR context. This vignette demonstrates a complete workflow from simulation to analysis.
+
+## Simulate Data
+
+First, we simulate genetic data with a non-linear relationship between exposure and outcome:
+
+```{r simulate}
+simulation_result <- sim_exp_out_non_linear(
+  include_pleiotropy = TRUE,
+  sample_size = 10000,
+  n_instruments = 30,
+  exposure_to_outcome_func = as.function(polynomial(coef = c(1, 10, 3, 0))),
+  confounder_to_exposure_func = as.function(polynomial(coef = c(3, 9, -6, 1))),
+  confounder_to_outcome_func = as.function(polynomial(coef = c(3, -2, 4)))
+)
+```
+
+Extract the simulated data:
+
+```{r extract-data}
+outcome_observed <- simulation_result[["simulated_data"]]$outcome_observed
+exposure_observed <- simulation_result[["simulated_data"]]$exposure_observed
+outcome_true <- simulation_result[["simulated_data"]]$outcome_true
+exposure_true <- simulation_result[["simulated_data"]]$exposure_true
+genotypes <- simulation_result[["genotypes"]]
+allele_frequencies <- simulation_result[["allele_frequencies"]]
+```
+
+## Create Orthogonal Polynomials
+
+We create orthogonal polynomials up to degree 5:
+
+```{r orthogonal-polynomials}
+n_degrees <- 5
+poly_result <- orthopol(degree = n_degrees, exposure_values = exposure_observed)
+
+# View structure
+str(poly_result, max.level = 1)
+```
+
+## Perform GWAS
+
+### GWAS for Exposures (Polynomial Terms)
+
+```{r gwas-exposures}
+gwas_exposure_list <- list()
+for (j in 1:n_degrees) {
+  gwas_temp <- c()
+  for (i in 1:ncol(genotypes)) {
+    model <- lm(poly_result[["values"]][, j] ~ genotypes[, i])
+    gwas_temp <- data.frame(
+      ins = paste0("X", i),
+      beta = coefficients(model)[2],
+      se = coef(summary(model))[, "Std. Error"][2],
+      pval = coef(summary(model))[, "Pr(>|t|)"][2],
+      af = allele_frequencies[i]
+    ) %>%
+      bind_rows(gwas_temp, .)
+  }
+  gwas_exposure_list[[j]] <- gwas_temp
+}
+```
+
+### GWAS for Outcome
+
+```{r gwas-outcome}
+gwas_outcome <- c()
+for (i in 1:ncol(genotypes)) {
+  model <- lm(outcome_observed ~ genotypes[, i])
+  gwas_outcome <- data.frame(
+    ins = paste0("X", i),
+    beta = coefficients(model)[2],
+    se = coef(summary(model))[, "Std. Error"][2],
+    pval = coef(summary(model))[, "Pr(>|t|)"][2],
+    af = allele_frequencies[i]
+  ) %>%
+    bind_rows(gwas_outcome, .)
+}
+```
+
+## Format Data for MVMR
+
+Merge instruments and format for TwoSampleMR:
+
+```{r format-mvmr}
+mvmr_exposure_data <- merge_exp_inst(gwas_exposure_list)
+
+mvmr_outcome_data <- gwas_outcome %>%
+  filter(ins %in% mvmr_exposure_data$SNP) %>%
+  rename(SNP = ins) %>%
+  mutate(outcome = "outcome") %>%
+  mutate(id.outcome = "outcome") %>%
+  mutate(effect_allele.outcome = "A") %>%
+  mutate(other_allele.outcome = "C") %>%
+  rename(beta.outcome = beta) %>%
+  rename(se.outcome = se) %>%
+  rename(pval.outcome = pval) %>%
+  rename(eaf.outcome = af)
+```
+
+## Run Complete MR Analysis
+
+The `mr_sim_res()` function performs the complete workflow:
+
+```{r run-analysis}
+analysis_results <- mr_sim_res(
+  mvmr_exposure_data = mvmr_exposure_data,
+  mvmr_outcome_data = mvmr_outcome_data,
+  simulation_data = simulation_result,
+  exposure_values = NULL,
+  inner_interval = 0.90,
+  include_intercept = TRUE,
+  orthogonal_poly_coef = poly_result$coefficients
+)
+```
+
+## View Results
+
+### MVMR Results
+
+```{r view-mvmr-results}
+analysis_results$mvmr_results
+```
+
+### Instrument Strength
+
+```{r view-instrument-strength}
+analysis_results$instrument_strength
+```
+
+### Visualization
+
+```{r view-plots, fig.width=10, fig.height=5}
+analysis_results$plots
+```
+
+### Pairwise Comparisons
+
+```{r view-pairwise-full, fig.width=10, fig.height=8}
+analysis_results$pairwise_comparison_full
+```
+
+```{r view-pairwise-inner, fig.width=10, fig.height=8}
+analysis_results$pairwise_comparison_inner
+```
+
+## Conclusion
+
+This workflow demonstrates how to:
+
+1. Simulate data with non-linear relationships
+2. Create orthogonal polynomials
+3. Perform GWAS for multiple polynomial degrees
+4. Run multivariable Mendelian randomization
+5. Visualize and interpret results
+
+For more details on individual functions, see their respective help pages (e.g., `?orthopol`, `?mr_sim_res`).

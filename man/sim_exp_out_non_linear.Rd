@@ -5,72 +5,72 @@
 \title{Simulate Exposure and Outcome with Non-Linear Relationship}
 \usage{
 sim_exp_out_non_linear(
-  n_s = 10000,
-  n_ins = 30,
-  beta_shape1 = 0.1,
-  beta_shape2 = 0.3,
-  prop_dom_ins = 0.1,
-  prop_non_lin_ins = 0.2,
-  val_non_lin = -1,
-  func_conf_x = as.function(polynom::polynomial(coef = c(0, 9, -6))),
-  func_conf_y = as.function(polynom::polynomial(coef = c(0, -2, 4))),
-  conf_mean = 0,
-  conf_sd = 1,
-  prop_var_err = 0.2,
-  prop_var_exp_X = 0.5,
-  a = c(10, 100),
-  pleiotropy = FALSE,
-  prop_pleio = 0.25,
-  func = as.function(polynom::polynomial(coef = c(1, 0, 5, 2)))
+  sample_size = 10000,
+  n_instruments = 30,
+  allele_freq_shape1 = 0.1,
+  allele_freq_shape2 = 0.3,
+  prop_dominant_instruments = 0.1,
+  prop_nonlinear_instruments = 0.2,
+  nonlinear_coding_value = -1,
+  confounder_to_exposure_func = as.function(polynom::polynomial(coef = c(0, 9, -6))),
+  confounder_to_outcome_func = as.function(polynom::polynomial(coef = c(0, -2, 4))),
+  confounder_mean = 0,
+  confounder_sd = 1,
+  prop_measurement_error = 0.2,
+  prop_variance_explained = 0.5,
+  polynomial_coef_unused = c(10, 100),
+  include_pleiotropy = FALSE,
+  prop_pleiotropic = 0.25,
+  exposure_to_outcome_func = as.function(polynom::polynomial(coef = c(1, 0, 5, 2)))
 )
 }
 \arguments{
-\item{n_s}{Integer. Sample size (default: 10000).}
+\item{sample_size}{Integer. Sample size (default: 10000).}
 
-\item{n_ins}{Integer. Number of genetic instruments (default: 30).}
+\item{n_instruments}{Integer. Number of genetic instruments (default: 30).}
 
-\item{beta_shape1}{Numeric. Beta distribution shape parameter 1 for allele
+\item{allele_freq_shape1}{Numeric. Beta distribution shape parameter 1 for allele
 frequencies (default: 0.1).}
 
-\item{beta_shape2}{Numeric. Beta distribution shape parameter 2 for allele
+\item{allele_freq_shape2}{Numeric. Beta distribution shape parameter 2 for allele
 frequencies (default: 0.3).}
 
-\item{prop_dom_ins}{Numeric. Proportion of dominant instruments (default: 0.1).}
+\item{prop_dominant_instruments}{Numeric. Proportion of dominant instruments (default: 0.1).}
 
-\item{prop_non_lin_ins}{Numeric. Proportion of non-linear instruments (default: 0.2).}
+\item{prop_nonlinear_instruments}{Numeric. Proportion of non-linear instruments (default: 0.2).}
 
-\item{val_non_lin}{Numeric. Value for non-linear instrument coding (default: -1).}
+\item{nonlinear_coding_value}{Numeric. Value for non-linear instrument coding (default: -1).}
 
-\item{func_conf_x}{Function. Polynomial function relating confounder to X
+\item{confounder_to_exposure_func}{Function. Polynomial function relating confounder to exposure
 (default: polynomial with coef c(0,9,-6)).}
 
-\item{func_conf_y}{Function. Polynomial function relating confounder to Y
+\item{confounder_to_outcome_func}{Function. Polynomial function relating confounder to outcome
 (default: polynomial with coef c(0,-2,4)).}
 
-\item{conf_mean}{Numeric. Confounder mean (default: 0).}
+\item{confounder_mean}{Numeric. Confounder mean (default: 0).}
 
-\item{conf_sd}{Numeric. Confounder standard deviation (default: 1).}
+\item{confounder_sd}{Numeric. Confounder standard deviation (default: 1).}
 
-\item{prop_var_err}{Numeric. Proportion of X variance from measurement error
+\item{prop_measurement_error}{Numeric. Proportion of exposure variance from measurement error
 (default: 0.2).}
 
-\item{prop_var_exp_X}{Numeric. Proportion of Y variance explained by X (default: 0.5).}
+\item{prop_variance_explained}{Numeric. Proportion of outcome variance explained by exposure (default: 0.5).}
 
-\item{a}{Numeric vector. Coefficients for polynomial from X to Y (currently unused).}
+\item{polynomial_coef_unused}{Numeric vector. Legacy parameter, currently unused.}
 
-\item{pleiotropy}{Logical. Whether to include pleiotropic effects (default: FALSE).}
+\item{include_pleiotropy}{Logical. Whether to include pleiotropic effects (default: FALSE).}
 
-\item{prop_pleio}{Numeric. Proportion of variants with pleiotropic effects
+\item{prop_pleiotropic}{Numeric. Proportion of variants with pleiotropic effects
 (default: 0.25).}
 
-\item{func}{Function. Polynomial function relating X to Y (default: polynomial
-with coef c(1,0,5,2)).}
+\item{exposure_to_outcome_func}{Function. Polynomial function relating exposure to outcome
+(default: polynomial with coef c(1,0,5,2)).}
 }
 \value{
 A list containing:
-\item{sims}{Data frame with X_true, X, Y_true, Y}
-\item{geno}{Matrix of genotypes}
-\item{af_ins}{Vector of allele frequencies}
+\item{simulated_data}{Data frame with exposure_true, exposure_observed, outcome_true, outcome_observed}
+\item{genotypes}{Matrix of genotypes}
+\item{allele_frequencies}{Vector of allele frequencies}
 }
 \description{
 Simulates genetic variants, exposure, and outcome data with a non-linear
@@ -80,9 +80,9 @@ measurement error.
 \examples{
 \dontrun{
 library(polynom)
-sim_data <- sim_exp_out_non_linear(
-  n_s = 5000,
-  func = as.function(polynomial(coef = c(1, 10, 3, 0)))
+sim_result <- sim_exp_out_non_linear(
+  sample_size = 5000,
+  exposure_to_outcome_func = as.function(polynomial(coef = c(1, 10, 3, 0)))
 )
 }
 }

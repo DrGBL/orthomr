@@ -2,40 +2,40 @@
 % Please edit documentation in R/mr_sim_res.R
 \name{mr_sim_res}
 \alias{mr_sim_res}
-\title{Harmonize and Run Complete MR Analysis}
+\title{Run Complete MR Analysis Workflow}
 \usage{
 mr_sim_res(
-  mvmr_exp,
-  mvmr_out,
-  test = NULL,
-  X = NULL,
-  inner_int = 0.95,
-  intercept_choice = TRUE,
-  polyX_coef
+  mvmr_exposure_data,
+  mvmr_outcome_data,
+  simulation_data = NULL,
+  exposure_values = NULL,
+  inner_interval = 0.95,
+  include_intercept = TRUE,
+  orthogonal_poly_coef
 )
 }
 \arguments{
-\item{mvmr_exp}{Data frame. MVMR exposure data in TwoSampleMR format.}
+\item{mvmr_exposure_data}{Data frame. MVMR exposure data in TwoSampleMR format.}
 
-\item{mvmr_out}{Data frame. MVMR outcome data in TwoSampleMR format.}
+\item{mvmr_outcome_data}{Data frame. MVMR outcome data in TwoSampleMR format.}
 
-\item{test}{List. Simulation output from \code{sim_exp_out_non_linear()}
+\item{simulation_data}{List. Simulation output from \code{sim_exp_out_non_linear()}
 (optional, for simulation studies).}
 
-\item{X}{Numeric vector. Exposure values for prediction (optional, for real data).}
+\item{exposure_values}{Numeric vector. Exposure values for prediction (optional, for real data).}
 
-\item{inner_int}{Numeric. Inner interval proportion for plotting (default: 0.95).}
+\item{inner_interval}{Numeric. Inner interval proportion for plotting (default: 0.95).}
 
-\item{intercept_choice}{Logical. Whether to include intercept in MVMR (default: TRUE).}
+\item{include_intercept}{Logical. Whether to include intercept in MVMR (default: TRUE).}
 
-\item{polyX_coef}{List. Polynomial coefficients from \code{orthopol()$coef}.}
+\item{orthogonal_poly_coef}{List. Polynomial coefficients from \code{orthopol()$coefficients}.}
 }
 \value{
 A list containing:
-\item{inst_strength}{Instrument strength statistics}
-\item{mvmr_res}{MVMR results}
-\item{poly_coeff}{Final polynomial coefficients}
-\item{final_plots}{Visualization plots}
+\item{instrument_strength}{Instrument strength statistics}
+\item{mvmr_results}{MVMR results}
+\item{polynomial_coefficients}{Final polynomial coefficients}
+\item{plots}{Visualization plots}
 \item{pairwise_comparison_full}{Pairwise comparison plots (full range, simulation only)}
 \item{pairwise_comparison_inner}{Pairwise comparison plots (inner range, simulation only)}
 }
@@ -47,18 +47,18 @@ degree selection, MVMR analysis, and visualization.
 \dontrun{
 # For simulation
 sim_results <- mr_sim_res(
-  mvmr_exp = mvmr_exp,
-  mvmr_out = mvmr_out,
-  test = sim_data,
-  polyX_coef = poly_result$coef
+  mvmr_exposure_data = mvmr_exposure_data,
+  mvmr_outcome_data = mvmr_outcome_data,
+  simulation_data = sim_result,
+  orthogonal_poly_coef = poly_result$coefficients
 )
 
 # For real data
 real_results <- mr_sim_res(
-  mvmr_exp = mvmr_exp,
-  mvmr_out = mvmr_out,
-  X = observed_exposure,
-  polyX_coef = poly_result$coef
+  mvmr_exposure_data = mvmr_exposure_data,
+  mvmr_outcome_data = mvmr_outcome_data,
+  exposure_values = observed_exposure,
+  orthogonal_poly_coef = poly_result$coefficients
 )
 }
 }

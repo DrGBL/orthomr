@@ -1,11 +1,11 @@
-#' Obtain Final Coefficients
+#' Obtain Final Polynomial Coefficients
 #'
 #' Combines orthogonal polynomial coefficients with MVMR coefficients to obtain
 #' final polynomial coefficients.
 #'
-#' @param polyX List. Output from \code{orthopol()$coef}.
-#' @param mvmr_res Data frame. MVMR results with columns: exposure, b, pval, nsnp.
-#' @param pval Numeric. P-value threshold for including polynomial terms (default: 0.05).
+#' @param orthogonal_poly_coef List. Output from \code{orthopol()$coefficients}.
+#' @param mvmr_results Data frame. MVMR results with columns: exposure, b, pval, nsnp.
+#' @param pvalue_threshold Numeric. P-value threshold for including polynomial terms (default: 0.05).
 #' @param set_higher_to_zero Logical. If TRUE, sets all higher-order terms to zero
 #'   once a non-significant term is encountered (default: FALSE).
 #' @param remove_degree_if_no_snps Logical. If TRUE, removes polynomial degrees
@@ -16,66 +16,78 @@
 #' @export
 #' @examples
 #' \dontrun{
-#' final_coef <- obtain_final_coeffs(polyX$coef, mvmr_res, pval = 0.05)
+#' final_coef <- obtain_final_coeffs(
+#'   poly_result$coefficients,
+#'   mvmr_results,
+#'   pvalue_threshold = 0.05
+#' )
 #' }
-obtain_final_coeffs <- function(polyX, mvmr_res, pval,
+obtain_final_coeffs <- function(orthogonal_poly_coef,
+                                mvmr_results,
+                                pvalue_threshold,
                                 set_higher_to_zero = FALSE,
                                 remove_degree_if_no_snps = FALSE) {
-  final_coefs <- polyX
+  final_coefficients <- orthogonal_poly_coef
 
-  if (mvmr_res$exposure[1] == "Intercept") {
-    intercept_df <- mvmr_res[1, ]
-    mvmr_res_tmp <- mvmr_res[-1, ]
+  if (mvmr_results$exposure[1] == "Intercept") {
+    intercept_data <- mvmr_results[1, ]
+    mvmr_results_filtered <- mvmr_results[-1, ]
   } else {
-    mvmr_res_tmp <- mvmr_res
+    mvmr_results_filtered <- mvmr_results
   }
 
   if (remove_degree_if_no_snps) {
-    mvmr_res_tmp <- mvmr_res_tmp %>%
+    mvmr_results_filtered <- mvmr_results_filtered %>%
       dplyr::mutate(degree_int = as.numeric(stringr::str_extract(exposure, "[0-9]*$"))) %>%
       dplyr::arrange(degree_int) %>%
       dplyr::mutate(keep_deg = FALSE)
-    for (i in 1:nrow(mvmr_res_tmp)) {
+    for (i in 1:nrow(mvmr_results_filtered)) {
       if (i == 1) {
-        if (mvmr_res_tmp$nsnp[i] > 0) {
-          mvmr_res_tmp$keep_deg[i] <- TRUE
+        if (mvmr_results_filtered$nsnp[i] > 0) {
+          mvmr_results_filtered$keep_deg[i] <- TRUE
         }
       } else {
-        if (mvmr_res_tmp$nsnp[i] > 0 & mvmr_res_tmp$keep_deg[i - 1] == TRUE) {
-          mvmr_res_tmp$keep_deg[i] <- TRUE
+        if (mvmr_results_filtered$nsnp[i] > 0 & mvmr_results_filtered$keep_deg[i - 1] == TRUE) {
+          mvmr_results_filtered$keep_deg[i] <- TRUE
         }
       }
     }
-    mvmr_res_tmp <- mvmr_res_tmp %>% dplyr::filter(keep_deg == TRUE)
-    final_coefs <- final_coefs[1:nrow(mvmr_res_tmp)]
+    mvmr_results_filtered <- mvmr_results_filtered %>% dplyr::filter(keep_deg == TRUE)
+    final_coefficients <- final_coefficients[1:nrow(mvmr_results_filtered)]
   }
 
   if (set_higher_to_zero == TRUE) {
-    stop_coeff <- FALSE
-    for (i in 1:nrow(mvmr_res_tmp)) {
-      if (mvmr_res_tmp$pval[which(mvmr_res_tmp$exposure == paste0("deg_", i))] < pval &
-          stop_coeff == FALSE) {
-        final_coefs[[i]] <- final_coefs[[i]] *
-          mvmr_res_tmp$b[which(mvmr_res_tmp$exposure == paste0("deg_", i))]
+    stop_coefficient <- FALSE
+    for (i in 1:nrow(mvmr_results_filtered)) {
+      exposure_name <- paste0("deg_", i)
+      exposure_index <- which(mvmr_results_filtered$exposure == exposure_name)
+
+      if (mvmr_results_filtered$pval[exposure_index] < pvalue_threshold &
+          stop_coefficient == FALSE) {
+        final_coefficients[[i]] <- final_coefficients[[i]] *
+          mvmr_results_filtered$b[exposure_index]
       } else {
-        final_coefs[[i]] <- final_coefs[[i]] * 0
-        stop_coeff <- TRUE
+        final_coefficients[[i]] <- final_coefficients[[i]] * 0
+        stop_coefficient <- TRUE
       }
     }
   } else {
-    for (i in 1:nrow(mvmr_res_tmp)) {
-      if (mvmr_res_tmp$pval[which(mvmr_res_tmp$exposure == paste0("deg_", i))] < pval) {
-        final_coefs[[i]] <- final_coefs[[i]] *
-          mvmr_res_tmp$b[which(mvmr_res_tmp$exposure == paste0("deg_", i))]
+    for (i in 1:nrow(mvmr_results_filtered)) {
+      exposure_name <- paste0("deg_", i)
+      exposure_index <- which(mvmr_results_filtered$exposure == exposure_name)
+
+      if (mvmr_results_filtered$pval[exposure_index] < pvalue_threshold) {
+        final_coefficients[[i]] <- final_coefficients[[i]] *
+          mvmr_results_filtered$b[exposure_index]
       } else {
-        final_coefs[[i]] <- final_coefs[[i]] * 0
+        final_coefficients[[i]] <- final_coefficients[[i]] * 0
       }
     }
   }
 
-  if (mvmr_res$exposure[1] == "Intercept") {
-    final_coefs[["Intercept"]] <- intercept_df$b
+  if (mvmr_results$exposure[1] == "Intercept") {
+    final_coefficients[["Intercept"]] <- intercept_data$b
   }
 
-  return(final_coefs)
+  return(final_coefficients)
 }

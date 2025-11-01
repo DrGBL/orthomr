@@ -4,22 +4,27 @@
 \alias{choose_n_degrees}
 \title{Choose Number of Polynomial Degrees}
 \usage{
-choose_n_degrees(mvmr_exp, mvmr_out, log10p_range = c(7, 300), F_thresh = 10)
+choose_n_degrees(
+  mvmr_exposure_data,
+  mvmr_outcome_data,
+  log10_pvalue_range = c(7, 300),
+  f_statistic_threshold = 10
+)
 }
 \arguments{
-\item{mvmr_exp}{Data frame. MVMR exposure data in TwoSampleMR format.}
+\item{mvmr_exposure_data}{Data frame. MVMR exposure data in TwoSampleMR format.}
 
-\item{mvmr_out}{Data frame. MVMR outcome data in TwoSampleMR format.}
+\item{mvmr_outcome_data}{Data frame. MVMR outcome data in TwoSampleMR format.}
 
-\item{log10p_range}{Numeric vector of length 2. Range of log10 p-values to test
+\item{log10_pvalue_range}{Numeric vector of length 2. Range of log10 p-values to test
 (default: c(7, 300)).}
 
-\item{F_thresh}{Numeric. F-statistic threshold (default: 10).}
+\item{f_statistic_threshold}{Numeric. F-statistic threshold (default: 10).}
 }
 \value{
 A list containing:
-\item{gwas_harm}{Harmonized GWAS data}
-\item{strength}{Instrument strength statistics}
+\item{harmonized_data}{Harmonized GWAS data}
+\item{instrument_strength}{Instrument strength statistics}
 Returns NULL if no valid configuration is found.
 }
 \description{
@@ -28,6 +33,10 @@ all polynomial degrees have F-statistics above a threshold.
 }
 \examples{
 \dontrun{
-result <- choose_n_degrees(mvmr_exp, mvmr_out, F_thresh = 10)
+result <- choose_n_degrees(
+  mvmr_exposure_data,
+  mvmr_outcome_data,
+  f_statistic_threshold = 10
+)
 }
 }

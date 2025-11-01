@@ -1,38 +1,38 @@
 #' Predict Using MVMR Polynomial Coefficients
 #'
-#' Given exposure values X and polynomial coefficients from MVMR, predicts
-#' the outcome Y.
+#' Given exposure values and polynomial coefficients from MVMR, predicts
+#' the outcome values.
 #'
-#' @param X Numeric vector. Exposure values.
-#' @param XYcoeff List. Polynomial coefficients from \code{obtain_final_coeffs()}.
+#' @param exposure_values Numeric vector. Exposure values.
+#' @param polynomial_coefficients List. Polynomial coefficients from \code{obtain_final_coeffs()}.
 #'
-#' @return Numeric vector of predicted Y values.
+#' @return Numeric vector of predicted outcome values.
 #'
 #' @export
 #' @examples
 #' \dontrun{
-#' X_new <- seq(-3, 3, 0.1)
-#' Y_pred <- predict_mvmr(X_new, final_coef)
+#' exposure_new <- seq(-3, 3, 0.1)
+#' outcome_predicted <- predict_mvmr(exposure_new, final_coefficients)
 #' }
-predict_mvmr <- function(X, XYcoeff) {
-  XYcoeff_tmp <- XYcoeff
+predict_mvmr <- function(exposure_values, polynomial_coefficients) {
+  coefficients_working <- polynomial_coefficients
 
-  if ("Intercept" %in% names(XYcoeff)) {
-    XYcoeff_tmp[["Intercept"]] <- NULL
+  if ("Intercept" %in% names(polynomial_coefficients)) {
+    coefficients_working[["Intercept"]] <- NULL
   }
 
-  predY <- rep(0, length(X))
-  for (i in 1:length(XYcoeff_tmp)) {
-    for (j in 1:length(XYcoeff_tmp[[i]])) {
-      if (!is.na(XYcoeff_tmp[[i]][j])) {
-        predY <- predY + XYcoeff_tmp[[i]][j] * X^(j - 1)
+  predicted_outcome <- rep(0, length(exposure_values))
+  for (i in 1:length(coefficients_working)) {
+    for (j in 1:length(coefficients_working[[i]])) {
+      if (!is.na(coefficients_working[[i]][j])) {
+        predicted_outcome <- predicted_outcome + coefficients_working[[i]][j] * exposure_values^(j - 1)
       }
     }
   }
 
-  if ("Intercept" %in% names(XYcoeff)) {
-    predY <- predY + XYcoeff[["Intercept"]]
+  if ("Intercept" %in% names(polynomial_coefficients)) {
+    predicted_outcome <- predicted_outcome + polynomial_coefficients[["Intercept"]]
   }
 
-  return(predY)
+  return(predicted_outcome)
 }

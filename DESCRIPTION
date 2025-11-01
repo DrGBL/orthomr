@@ -19,4 +19,7 @@ Imports:
     GGally,
     ggpubr
 Suggests:
-    DRMR
+    DRMR,
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr

@@ -4,15 +4,15 @@
 \alias{run_mvmr}
 \title{Run Multivariable Mendelian Randomization}
 \usage{
-run_mvmr(gwas_harm, intercept = TRUE, pvalue = 5e-08)
+run_mvmr(harmonized_data, include_intercept = TRUE, pvalue_threshold = 5e-08)
 }
 \arguments{
-\item{gwas_harm}{List. Harmonized GWAS data from \code{TwoSampleMR::mv_harmonise_data()}
+\item{harmonized_data}{List. Harmonized GWAS data from \code{TwoSampleMR::mv_harmonise_data()}
 or \code{choose_n_degrees()}.}
 
-\item{intercept}{Logical. Whether to include an intercept term (default: TRUE).}
+\item{include_intercept}{Logical. Whether to include an intercept term (default: TRUE).}
 
-\item{pvalue}{Numeric. P-value threshold for counting significant SNPs (default: 5e-8).}
+\item{pvalue_threshold}{Numeric. P-value threshold for counting significant SNPs (default: 5e-8).}
 }
 \value{
 A data frame with MVMR results containing columns:
@@ -27,6 +27,6 @@ Performs MVMR analysis using harmonized GWAS data.
 }
 \examples{
 \dontrun{
-mvmr_results <- run_mvmr(gwas_harm, intercept = TRUE)
+mvmr_results <- run_mvmr(harmonized_data, include_intercept = TRUE)
 }
 }

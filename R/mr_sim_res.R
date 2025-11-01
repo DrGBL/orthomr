@@ -1,22 +1,22 @@
-#' Harmonize and Run Complete MR Analysis
+#' Run Complete MR Analysis Workflow
 #'
 #' Wrapper function that performs the complete MR workflow: harmonization,
 #' degree selection, MVMR analysis, and visualization.
 #'
-#' @param mvmr_exp Data frame. MVMR exposure data in TwoSampleMR format.
-#' @param mvmr_out Data frame. MVMR outcome data in TwoSampleMR format.
-#' @param test List. Simulation output from \code{sim_exp_out_non_linear()}
+#' @param mvmr_exposure_data Data frame. MVMR exposure data in TwoSampleMR format.
+#' @param mvmr_outcome_data Data frame. MVMR outcome data in TwoSampleMR format.
+#' @param simulation_data List. Simulation output from \code{sim_exp_out_non_linear()}
 #'   (optional, for simulation studies).
-#' @param X Numeric vector. Exposure values for prediction (optional, for real data).
-#' @param inner_int Numeric. Inner interval proportion for plotting (default: 0.95).
-#' @param intercept_choice Logical. Whether to include intercept in MVMR (default: TRUE).
-#' @param polyX_coef List. Polynomial coefficients from \code{orthopol()$coef}.
+#' @param exposure_values Numeric vector. Exposure values for prediction (optional, for real data).
+#' @param inner_interval Numeric. Inner interval proportion for plotting (default: 0.95).
+#' @param include_intercept Logical. Whether to include intercept in MVMR (default: TRUE).
+#' @param orthogonal_poly_coef List. Polynomial coefficients from \code{orthopol()$coefficients}.
 #'
 #' @return A list containing:
-#'   \item{inst_strength}{Instrument strength statistics}
-#'   \item{mvmr_res}{MVMR results}
-#'   \item{poly_coeff}{Final polynomial coefficients}
-#'   \item{final_plots}{Visualization plots}
+#'   \item{instrument_strength}{Instrument strength statistics}
+#'   \item{mvmr_results}{MVMR results}
+#'   \item{polynomial_coefficients}{Final polynomial coefficients}
+#'   \item{plots}{Visualization plots}
 #'   \item{pairwise_comparison_full}{Pairwise comparison plots (full range, simulation only)}
 #'   \item{pairwise_comparison_inner}{Pairwise comparison plots (inner range, simulation only)}
 #'
@@ -25,118 +25,126 @@
 #' \dontrun{
 #' # For simulation
 #' sim_results <- mr_sim_res(
-#'   mvmr_exp = mvmr_exp,
-#'   mvmr_out = mvmr_out,
-#'   test = sim_data,
-#'   polyX_coef = poly_result$coef
+#'   mvmr_exposure_data = mvmr_exposure_data,
+#'   mvmr_outcome_data = mvmr_outcome_data,
+#'   simulation_data = sim_result,
+#'   orthogonal_poly_coef = poly_result$coefficients
 #' )
 #'
 #' # For real data
 #' real_results <- mr_sim_res(
-#'   mvmr_exp = mvmr_exp,
-#'   mvmr_out = mvmr_out,
-#'   X = observed_exposure,
-#'   polyX_coef = poly_result$coef
+#'   mvmr_exposure_data = mvmr_exposure_data,
+#'   mvmr_outcome_data = mvmr_outcome_data,
+#'   exposure_values = observed_exposure,
+#'   orthogonal_poly_coef = poly_result$coefficients
 #' )
 #' }
-mr_sim_res <- function(mvmr_exp,
-                       mvmr_out,
-                       test = NULL,
-                       X = NULL,
-                       inner_int = 0.95,
-                       intercept_choice = TRUE,
-                       polyX_coef) {
+mr_sim_res <- function(mvmr_exposure_data,
+                       mvmr_outcome_data,
+                       simulation_data = NULL,
+                       exposure_values = NULL,
+                       inner_interval = 0.95,
+                       include_intercept = TRUE,
+                       orthogonal_poly_coef) {
 
-  gwas_harm_choice <- choose_n_degrees(mvmr_exp, mvmr_out)
-  gwas_harm <- gwas_harm_choice[[1]]
-  strength_mvmr <- gwas_harm_choice[[2]]
+  degree_selection_result <- choose_n_degrees(mvmr_exposure_data, mvmr_outcome_data)
+  harmonized_data <- degree_selection_result[[1]]
+  instrument_strength <- degree_selection_result[[2]]
 
-  mvmr_res <- run_mvmr(gwas_harm, intercept = intercept_choice)
+  mvmr_results <- run_mvmr(harmonized_data, include_intercept = include_intercept)
 
-  XYcoeff <- obtain_final_coeffs(polyX_coef, mvmr_res, pval = 1, set_higher_to_zero = FALSE)
+  final_coefficients <- obtain_final_coeffs(
+    orthogonal_poly_coef,
+    mvmr_results,
+    pvalue_threshold = 1,
+    set_higher_to_zero = FALSE
+  )
 
-  if (!is.null(test)) {
-    Y <- test[["sims"]]$Y
-    X <- test[["sims"]]$X
-    Y_true <- test[["sims"]]$Y_true
-    X_true <- test[["sims"]]$X_true
+  if (!is.null(simulation_data)) {
+    outcome_observed <- simulation_data[["simulated_data"]]$outcome_observed
+    exposure_observed <- simulation_data[["simulated_data"]]$exposure_observed
+    outcome_true <- simulation_data[["simulated_data"]]$outcome_true
+    exposure_true <- simulation_data[["simulated_data"]]$exposure_true
 
-    dfres <- data.frame(
-      X_true = X_true,
-      X = X,
-      Y_true = Y_true,
-      Y = Y
+    results_df <- data.frame(
+      exposure_true = exposure_true,
+      exposure_observed = exposure_observed,
+      outcome_true = outcome_true,
+      outcome_observed = outcome_observed
     )
 
-    quants <- quantile(dfres$X, c((1 - inner_int) / 2, 1 - (1 - inner_int) / 2))
-
-    plot_sim <- plot_mr_res(
-      Y_true,
-      X_true,
-      polyX = polyX_coef,
-      xmin = min(dfres$X),
-      xmax = max(dfres$X),
-      inner_min = quants[1],
-      inner_max = quants[2],
-      mvmr_res,
-      n_draws = 100
+    quantiles <- quantile(
+      results_df$exposure_observed,
+      c((1 - inner_interval) / 2, 1 - (1 - inner_interval) / 2)
     )
 
-    # Error plots without inner_interval
-    predY <- predict_mvmr(dfres$X, XYcoeff)
-    dfres <- dfres %>%
-      dplyr::mutate(Y_predicted = predY) %>%
-      dplyr::mutate(error = Y_true - Y_predicted)
+    mr_plot <- plot_mr_res(
+      outcome_true,
+      exposure_true,
+      orthogonal_poly_coef = orthogonal_poly_coef,
+      exposure_min = min(results_df$exposure_observed),
+      exposure_max = max(results_df$exposure_observed),
+      inner_quantile_min = quantiles[1],
+      inner_quantile_max = quantiles[2],
+      mvmr_results,
+      n_random_draws = 100
+    )
 
-    pair_plot_full <- GGally::ggpairs(dfres)
+    # Error plots without inner interval
+    predicted_outcome <- predict_mvmr(results_df$exposure_observed, final_coefficients)
+    results_df <- results_df %>%
+      dplyr::mutate(outcome_predicted = predicted_outcome) %>%
+      dplyr::mutate(error = outcome_true - outcome_predicted)
 
-    # Error plots with inner_interval
-    dfres <- dfres %>%
-      dplyr::filter(X >= quants[1] & X <= quants[2]) %>%
-      dplyr::filter(X_true >= quants[1] & X_true <= quants[2])
-    predY <- predict_mvmr(dfres$X, XYcoeff)
+    pairwise_plot_full <- GGally::ggpairs(results_df)
 
-    dfres <- dfres %>%
-      dplyr::mutate(Y_predicted = predY) %>%
-      dplyr::mutate(error = Y_true - Y_predicted)
+    # Error plots with inner interval
+    results_df <- results_df %>%
+      dplyr::filter(exposure_observed >= quantiles[1] & exposure_observed <= quantiles[2]) %>%
+      dplyr::filter(exposure_true >= quantiles[1] & exposure_true <= quantiles[2])
+    predicted_outcome <- predict_mvmr(results_df$exposure_observed, final_coefficients)
 
-    pair_plot_inner <- GGally::ggpairs(dfres)
+    results_df <- results_df %>%
+      dplyr::mutate(outcome_predicted = predicted_outcome) %>%
+      dplyr::mutate(error = outcome_true - outcome_predicted)
+
+    pairwise_plot_inner <- GGally::ggpairs(results_df)
 
     return(list(
-      inst_strength = strength_mvmr,
-      mvmr_res = mvmr_res,
-      poly_coeff = XYcoeff,
-      final_plots = plot_sim,
-      pairwise_comparison_full = pair_plot_full,
-      pairwise_comparison_inner = pair_plot_inner
+      instrument_strength = instrument_strength,
+      mvmr_results = mvmr_results,
+      polynomial_coefficients = final_coefficients,
+      plots = mr_plot,
+      pairwise_comparison_full = pairwise_plot_full,
+      pairwise_comparison_inner = pairwise_plot_inner
     ))
   }
 
-  if (!is.null(X)) {
-    quants <- quantile(X, c((1 - inner_int) / 2, 1 - (1 - inner_int) / 2))
-    plot_sim <- plot_mr_res(
-      Y_true = NULL,
-      X_true = X,
-      polyX = polyX_coef,
-      xmin = min(X),
-      xmax = max(X),
-      inner_min = quants[1],
-      inner_max = quants[2],
-      mvmr_res = mvmr_res,
-      n_draws = 100
+  if (!is.null(exposure_values)) {
+    quantiles <- quantile(exposure_values, c((1 - inner_interval) / 2, 1 - (1 - inner_interval) / 2))
+    mr_plot <- plot_mr_res(
+      outcome_true = NULL,
+      exposure_true = exposure_values,
+      orthogonal_poly_coef = orthogonal_poly_coef,
+      exposure_min = min(exposure_values),
+      exposure_max = max(exposure_values),
+      inner_quantile_min = quantiles[1],
+      inner_quantile_max = quantiles[2],
+      mvmr_results = mvmr_results,
+      n_random_draws = 100
     )
 
     return(list(
-      inst_strength = strength_mvmr,
-      mvmr_res = mvmr_res,
-      poly_coeff = XYcoeff,
-      final_plots = plot_sim
+      instrument_strength = instrument_strength,
+      mvmr_results = mvmr_results,
+      polynomial_coefficients = final_coefficients,
+      plots = mr_plot
     ))
   }
 
   return(list(
-    inst_strength = strength_mvmr,
-    mvmr_res = mvmr_res,
-    poly_coeff = XYcoeff
+    instrument_strength = instrument_strength,
+    mvmr_results = mvmr_results,
+    polynomial_coefficients = final_coefficients
   ))
 }

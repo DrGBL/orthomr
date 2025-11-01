@@ -4,19 +4,19 @@
 \alias{orthopol}
 \title{Create Orthogonal Polynomials}
 \usage{
-orthopol(degree, X, force_x_zero = TRUE)
+orthopol(degree, exposure_values, force_zero_intercept = TRUE)
 }
 \arguments{
 \item{degree}{Integer. The maximum degree of the polynomial.}
 
-\item{X}{Numeric vector. The exposure values.}
+\item{exposure_values}{Numeric vector. The exposure values.}
 
-\item{force_x_zero}{Logical. If TRUE (default), forces the constant term to zero.}
+\item{force_zero_intercept}{Logical. If TRUE (default), forces the constant term to zero.}
 }
 \value{
 A list containing:
 \item{values}{Matrix of orthogonal polynomial values}
-\item{coef}{List of coefficient vectors for each polynomial degree}
+\item{coefficients}{List of coefficient vectors for each polynomial degree}
 }
 \description{
 Generates orthogonal polynomials up to a specified degree and numerically
@@ -24,7 +24,7 @@ approximates their coefficients.
 }
 \examples{
 \dontrun{
-X <- rnorm(100)
-poly_result <- orthopol(degree = 3, X = X)
+exposure_values <- rnorm(100)
+poly_result <- orthopol(degree = 3, exposure_values = exposure_values)
 }
 }

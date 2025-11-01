@@ -5,41 +5,41 @@
 \title{Plot Mendelian Randomization Results}
 \usage{
 plot_mr_res(
-  Y_true,
-  X_true,
-  polyX,
-  xmin,
-  xmax,
-  mvmr_res,
-  n_draws = 100,
-  n_steps = 100,
-  inner_min = NULL,
-  inner_max = NULL
+  outcome_true,
+  exposure_true,
+  orthogonal_poly_coef,
+  exposure_min,
+  exposure_max,
+  mvmr_results,
+  n_random_draws = 100,
+  n_plot_steps = 100,
+  inner_quantile_min = NULL,
+  inner_quantile_max = NULL
 )
 }
 \arguments{
-\item{Y_true}{Numeric vector. True Y values (can be NULL for real data).}
+\item{outcome_true}{Numeric vector. True outcome values (can be NULL for real data).}
 
-\item{X_true}{Numeric vector. True or observed X values.}
+\item{exposure_true}{Numeric vector. True or observed exposure values.}
 
-\item{polyX}{List. Polynomial coefficients from \code{orthopol()$coef}.}
+\item{orthogonal_poly_coef}{List. Polynomial coefficients from \code{orthopol()$coefficients}.}
 
-\item{xmin}{Numeric. Minimum X value for plotting range.}
+\item{exposure_min}{Numeric. Minimum exposure value for plotting range.}
 
-\item{xmax}{Numeric. Maximum X value for plotting range.}
+\item{exposure_max}{Numeric. Maximum exposure value for plotting range.}
 
-\item{mvmr_res}{Data frame. MVMR results from \code{run_mvmr()}.}
+\item{mvmr_results}{Data frame. MVMR results from \code{run_mvmr()}.}
 
-\item{n_draws}{Integer. Number of random draws for confidence intervals (default: 100).}
+\item{n_random_draws}{Integer. Number of random draws for confidence intervals (default: 100).}
 
-\item{n_steps}{Integer. Number of steps for prediction range (default: 100).}
+\item{n_plot_steps}{Integer. Number of steps for prediction range (default: 100).}
 
-\item{inner_min}{Numeric. Lower bound for inner interval (optional).}
+\item{inner_quantile_min}{Numeric. Lower bound for inner interval (optional).}
 
-\item{inner_max}{Numeric. Upper bound for inner interval (optional).}
+\item{inner_quantile_max}{Numeric. Upper bound for inner interval (optional).}
 }
 \value{
-A ggplot object or ggarrange object (if Y_true is provided).
+A ggplot object or ggarrange object (if outcome_true is provided).
 }
 \description{
 Creates visualization of MR results with confidence intervals from random draws.
@@ -47,12 +47,12 @@ Creates visualization of MR results with confidence intervals from random draws.
 \examples{
 \dontrun{
 plot_mr_res(
-  Y_true = sim_data$sims$Y_true,
-  X_true = sim_data$sims$X_true,
-  polyX = poly_result$coef,
-  xmin = -3,
-  xmax = 3,
-  mvmr_res = mvmr_results
+  outcome_true = sim_result$simulated_data$outcome_true,
+  exposure_true = sim_result$simulated_data$exposure_true,
+  orthogonal_poly_coef = poly_result$coefficients,
+  exposure_min = -3,
+  exposure_max = 3,
+  mvmr_results = mvmr_results
 )
 }
 }

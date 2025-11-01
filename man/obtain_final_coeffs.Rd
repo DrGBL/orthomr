@@ -2,22 +2,22 @@
 % Please edit documentation in R/obtain_final_coeffs.R
 \name{obtain_final_coeffs}
 \alias{obtain_final_coeffs}
-\title{Obtain Final Coefficients}
+\title{Obtain Final Polynomial Coefficients}
 \usage{
 obtain_final_coeffs(
-  polyX,
-  mvmr_res,
-  pval,
+  orthogonal_poly_coef,
+  mvmr_results,
+  pvalue_threshold,
   set_higher_to_zero = FALSE,
   remove_degree_if_no_snps = FALSE
 )
 }
 \arguments{
-\item{polyX}{List. Output from \code{orthopol()$coef}.}
+\item{orthogonal_poly_coef}{List. Output from \code{orthopol()$coefficients}.}
 
-\item{mvmr_res}{Data frame. MVMR results with columns: exposure, b, pval, nsnp.}
+\item{mvmr_results}{Data frame. MVMR results with columns: exposure, b, pval, nsnp.}
 
-\item{pval}{Numeric. P-value threshold for including polynomial terms (default: 0.05).}
+\item{pvalue_threshold}{Numeric. P-value threshold for including polynomial terms (default: 0.05).}
 
 \item{set_higher_to_zero}{Logical. If TRUE, sets all higher-order terms to zero
 once a non-significant term is encountered (default: FALSE).}
@@ -34,6 +34,10 @@ final polynomial coefficients.
 }
 \examples{
 \dontrun{
-final_coef <- obtain_final_coeffs(polyX$coef, mvmr_res, pval = 0.05)
+final_coef <- obtain_final_coeffs(
+  poly_result$coefficients,
+  mvmr_results,
+  pvalue_threshold = 0.05
+)
 }
 }
