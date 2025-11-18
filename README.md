@@ -20,6 +20,8 @@ library(orthomr)
 browseVignettes("orthomr")
 ```
 
+# Step 1: create orthogonal polynomials
+
 To use the package on real data, you need to first create orthogonal polynomials by inputting a 3 columns file (```you_data_df.tsv.gz```) to the function ```prep_poly_exposure```:
 
 Here, we used polynomials of degrees 1 through 5.
@@ -37,7 +39,15 @@ This will create a file called ```output_prefix_polynomial_phenotype_df.tsv.gz``
 
 It also outputs an R object list of the polynomial coefficients and saves it in the same directory as ```output_prefix_polynomial_coef_list.RDS```.
 
-You then need to LD-clump the GWAS so that all instruments for all phenotypes are in linkage equilibrium. A suggested helper file is provided here (```inst_select.sh```.), but this can be done differently by the user. The required input for this function are:
+# Step 2: run GWASs
+
+Run one GWAS on each orthogonal polynomial vector obtained above. Use the same covariates in each GWAS.
+
+For ease, it is suggested that the output GWAS be split by chromosomes and named ```summ_stats_prefix_chr{chrN}_deg_{degN}.tsv.gz```, where ```summ_stats_prefix``` is at the user's choice. That way the next few steps will be easier.
+
+# Step 3: LD-clump
+
+You then need to LD-clump the GWAS so that all instruments for all phenotypes are in linkage equilibrium. A suggested helper file is provided here (```inst_select.sh```), but this can be done differently by the user. The required input for this function are:
 
 - ```--summ_stats_prefix```: prefix of orthogonal polynomial GWAS summary statistics files (see next line for details).
 
@@ -63,9 +73,19 @@ You then need to LD-clump the GWAS so that all instruments for all phenotypes ar
 
 - ```--max_degree```: the maximum polynomial degree to work with.
 
-Additional optional arguments are explained in the ```--help``` command.
+Additional optional arguments are explained in the ```--help``` command, this includes an optional argument (```--restrict_variants```) to use only variants that are also found in the outcome GWAS that the user will use.
 
-The summary statistics of the chosen instruments can then be loaded using the TwoSampleMR package multivariable MR framework, using the ```mr_sim_res```  command as follows:
+This outputs a single column file with the IDs of the selected variants (```final_all_lead_variants.txt```).
+
+# Step 4: run orthomr proper
+
+The summary statistics of the chosen instruments can then be loaded using the TwoSampleMR package multivariable MR framework. An optional wrapper function is available to do this (but the user may find more efficient ways of doing it on their own):
+
+```r
+
+```
+
+Then you can run the analysis using the ```mr_sim_res```  command as follows:
 
 ```r
 poly_result<-readRDS("output_prefix_polynomial_coef_list.RDS")
