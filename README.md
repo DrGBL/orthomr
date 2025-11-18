@@ -77,13 +77,50 @@ Additional optional arguments are explained in the ```--help``` command, this in
 
 This outputs a single column file with the IDs of the selected variants (```final_all_lead_variants.txt```).
 
-# Step 4: run orthomr proper
+# Step 4: load summary statistics into R with the TwoSampleMR multivariable MR toolkit
 
-The summary statistics of the chosen instruments can then be loaded using the TwoSampleMR package multivariable MR framework. An optional wrapper function is available to do this (but the user may find more efficient ways of doing it on their own):
+The summary statistics of the chosen instruments can then be loaded using the TwoSampleMR package multivariable MR framework. For example, one can loop through the summary statistics files above (columns names may differ):
 
 ```r
+library(vroom)
 
+final_all_lead_variants<-scan("final_all_lead_variants.txt", what="character")
+
+mvmr_exposure_data<-c()
+for(d in 1:n_degree){
+  print(d)
+  for(c in 1:22){
+    mvmr_exposure_data<-vroom(paste0("summ_stats_prefix_chr",c,"_deg_",d,".tsv.gz"")) %>%
+      filter(Name %in% final_all_lead_variants) %>%
+      format_data(type="exposure",
+                  snp_col="Name",
+                  beta_col="Effect",
+                  se_col="se",
+                  eaf_col="AAF",
+                  effect_allele_col="Alt",
+                  other_allele_col="Ref",
+                  pval_col="Pval",
+                  samplesize_col="Num_Cases",
+                  chr_col="Chr",
+                  pos_col="Pos") %>%
+      mutate(exposure=paste0("deg_",d)) %>%
+      mutate(id.exposure=paste0("deg_",d)) %>%
+  }
+}
 ```
+
+A similar procedure can be used to load the instruments' outcome summary statistics ```mvmr_outcome_data```.
+
+The user may want to do this using other functions to be more efficient if they prefer.
+
+Note that we recommend removing the HLA region in all MR analyses.
+
+```r
+mvmr_exposure_data <- mvmr_exposure_data %>%
+  filter(chr.exposure!=6 | pos.exposure < 22000000 | pos.exposure>36000000 )
+```
+
+# Step 5: run the analysis
 
 Then you can run the analysis using the ```mr_sim_res```  command as follows:
 
