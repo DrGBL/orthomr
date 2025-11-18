@@ -20,7 +20,7 @@ library(orthomr)
 browseVignettes("orthomr")
 ```
 
-# Step 1: create orthogonal polynomials
+### Step 1: create orthogonal polynomials
 
 To use the package on real data, you need to first create orthogonal polynomials by inputting a 3 columns file (```you_data_df.tsv.gz```) to the function ```prep_poly_exposure```:
 
@@ -39,13 +39,13 @@ This will create a file called ```output_prefix_polynomial_phenotype_df.tsv.gz``
 
 It also outputs an R object list of the polynomial coefficients and saves it in the same directory as ```output_prefix_polynomial_coef_list.RDS```.
 
-# Step 2: run GWASs
+### Step 2: run GWASs
 
 Run one GWAS on each orthogonal polynomial vector obtained above. Use the same covariates in each GWAS.
 
 For ease, it is suggested that the output GWAS be split by chromosomes and named ```summ_stats_prefix_chr{chrN}_deg_{degN}.tsv.gz```, where ```summ_stats_prefix``` is at the user's choice. That way the next few steps will be easier.
 
-# Step 3: LD-clump
+### Step 3: LD-clump
 
 You then need to LD-clump the GWAS so that all instruments for all phenotypes are in linkage equilibrium. A suggested helper file is provided here (```inst_select.sh```), but this can be done differently by the user. The required input for this function are:
 
@@ -77,7 +77,7 @@ Additional optional arguments are explained in the ```--help``` command, this in
 
 This outputs a single column file with the IDs of the selected variants (```final_all_lead_variants.txt```).
 
-# Step 4: load summary statistics into R with the TwoSampleMR multivariable MR toolkit
+### Step 4: load summary statistics into R with the TwoSampleMR multivariable MR toolkit
 
 The summary statistics of the chosen instruments can then be loaded using the TwoSampleMR package multivariable MR framework. For example, one can loop through the summary statistics files above (columns names may differ):
 
@@ -120,7 +120,7 @@ mvmr_exposure_data <- mvmr_exposure_data %>%
   filter(chr.exposure!=6 | pos.exposure < 22000000 | pos.exposure>36000000 )
 ```
 
-# Step 5: run the analysis
+### Step 5: run the analysis
 
 Then you can run the analysis using the ```mr_sim_res```  command as follows:
 
