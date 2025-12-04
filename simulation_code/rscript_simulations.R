@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 
 # Command-line interface for run_full_simulation_study
-# Usage: Rscript run_simulation_cli.R --source_file ./simulation_functions.R --inner_interval 0.90 --n_replicates 50 --output_dir ./results --output_name simulation_results.rds
+# Usage: Rscript run_simulation_cli.R --inner_interval 0.90 --n_replicates 50 --output_dir ./results --output_name simulation_results.rds
 
 library(optparse)
 library(orthomr)
@@ -12,10 +12,9 @@ library(tidyr)
 library(purrr)
 library(TwoSampleMR)
 
+
 # Define command-line options
 option_list <- list(
-  make_option(c("--source_file"), type="character", default=NULL,
-              help="Path to R file containing simulation functions (required)"),
   make_option(c("--inner_interval"), type="double", default=0.90,
               help="Proportion of exposure distribution to use for error calculation [default %default]"),
   make_option(c("--n_replicates"), type="integer", default=50,
@@ -35,6 +34,7 @@ option_list <- list(
 # Parse arguments
 opt_parser <- OptionParser(option_list=option_list)
 opt <- parse_args(opt_parser)
+
 
 #' Run Usual MR
 #'
@@ -529,225 +529,6 @@ run_full_simulation_study <- function(inner_interval = 0.90,
   
   return(final_results)
 }
-
-#' Summarize Simulation Results
-#'
-#' @param results Data frame from run_full_simulation_study()
-#' @param use_full_data If TRUE, summarize full data metrics; if FALSE, summarize inner interval metrics (default: FALSE)
-#' @param method Method to summarize: "polynomial" or "ivw" (default: "polynomial")
-#'
-#' @return Summary statistics by scenario
-summarize_results <- function(results, use_full_data = FALSE, method = "polynomial") {
-  
-  # Select appropriate columns based on method and data type
-  if (method == "polynomial") {
-    if(use_full_data) {
-      results %>%
-        filter(converged == TRUE) %>%
-        mutate(scenario=stringr::str_replace(scenario,"_rep_[0-9]*","")) %>%
-        group_by(scenario) %>%
-        summarise(
-          n_converged = n(),
-          mean_mse = mean(poly_mse_full, na.rm = TRUE),
-          sd_mse = sd(poly_mse_full, na.rm = TRUE),
-          mean_mae = mean(poly_mae_full, na.rm = TRUE),
-          mean_bias = mean(poly_bias_full, na.rm = TRUE),
-          sd_bias = sd(poly_bias_full, na.rm = TRUE),
-          mean_r2 = mean(poly_r_squared_full, na.rm = TRUE),
-          median_selected_degree = median(selected_degree, na.rm = TRUE),
-          mean_min_f = mean(min_f_stat, na.rm = TRUE),
-          method = "Polynomial",
-          data_type = "Full",
-          .groups = "drop"
-        ) %>%
-        arrange(mean_mse)
-    } else {
-      results %>%
-        filter(converged == TRUE) %>%
-        mutate(scenario=stringr::str_replace(scenario,"_rep_[0-9]*","")) %>%
-        group_by(scenario) %>%
-        summarise(
-          n_converged = n(),
-          mean_mse = mean(poly_mse, na.rm = TRUE),
-          sd_mse = sd(poly_mse, na.rm = TRUE),
-          mean_mae = mean(poly_mae, na.rm = TRUE),
-          mean_bias = mean(poly_bias, na.rm = TRUE),
-          sd_bias = sd(poly_bias, na.rm = TRUE),
-          mean_r2 = mean(poly_r_squared, na.rm = TRUE),
-          median_selected_degree = median(selected_degree, na.rm = TRUE),
-          mean_min_f = mean(min_f_stat, na.rm = TRUE),
-          inner_interval = first(inner_interval),
-          method = "Polynomial",
-          data_type = "Inner",
-          .groups = "drop"
-        ) %>%
-        arrange(mean_mse)
-    }
-  } else if (method == "ivw") {
-    if(use_full_data) {
-      results %>%
-        filter(converged == TRUE) %>%
-        mutate(scenario=stringr::str_replace(scenario,"_rep_[0-9]*","")) %>%
-        group_by(scenario) %>%
-        summarise(
-          n_converged = n(),
-          mean_mse = mean(ivw_mse_full, na.rm = TRUE),
-          sd_mse = sd(ivw_mse_full, na.rm = TRUE),
-          mean_mae = mean(ivw_mae_full, na.rm = TRUE),
-          mean_bias = mean(ivw_bias_full, na.rm = TRUE),
-          sd_bias = sd(ivw_bias_full, na.rm = TRUE),
-          mean_r2 = mean(ivw_r_squared_full, na.rm = TRUE),
-          mean_ivw_beta = mean(ivw_beta, na.rm = TRUE),
-          mean_min_f = mean(min_f_stat, na.rm = TRUE),
-          method = "IVW",
-          data_type = "Full",
-          .groups = "drop"
-        ) %>%
-        arrange(mean_mse)
-    } else {
-      results %>%
-        filter(converged == TRUE) %>%
-        mutate(scenario=stringr::str_replace(scenario,"_rep_[0-9]*","")) %>%
-        group_by(scenario) %>%
-        summarise(
-          n_converged = n(),
-          mean_mse = mean(ivw_mse, na.rm = TRUE),
-          sd_mse = sd(ivw_mse, na.rm = TRUE),
-          mean_mae = mean(ivw_mae, na.rm = TRUE),
-          mean_bias = mean(ivw_bias, na.rm = TRUE),
-          sd_bias = sd(ivw_bias, na.rm = TRUE),
-          mean_r2 = mean(ivw_r_squared, na.rm = TRUE),
-          mean_ivw_beta = mean(ivw_beta, na.rm = TRUE),
-          inner_interval = first(inner_interval),
-          mean_min_f = mean(min_f_stat, na.rm = TRUE),
-          method = "IVW",
-          data_type = "Inner",
-          .groups = "drop"
-        ) %>%
-        arrange(mean_mse)
-    }
-  }
-}
-
-#' Plot Simulation Results
-#'
-#' @param results Data frame from run_full_simulation_study()
-#'
-#' @return List of ggplot objects
-plot_simulation_results <- function(results) {
-  
-  plots <- list()
-  
-  # 1. MSE comparison
-  plots$mse <- results %>%
-    filter(converged == TRUE) %>%
-    ggplot(aes(x = scenario, y = poly_mse)) +
-    geom_boxplot() +
-    coord_flip() +
-    labs(title = "Mean Squared Error by Scenario (Polynomial MVMR, Inner Interval)",
-         x = "Scenario", y = "MSE") +
-    theme_bw()
-  
-  # 2. Bias by quintile
-  plots$bias_quintile <- results %>%
-    filter(converged == TRUE) %>%
-    select(scenario, starts_with("bias_q")) %>%
-    pivot_longer(cols = starts_with("bias_q"),
-                 names_to = "quintile",
-                 values_to = "bias") %>%
-    ggplot(aes(x = quintile, y = bias, color = scenario)) +
-    geom_boxplot() +
-    geom_hline(yintercept = 0, linetype = "dashed") +
-    labs(title = "Bias Across Exposure Quintiles",
-         x = "Quintile", y = "Bias") +
-    theme_bw()
-  
-  # 3. Degree selection
-  plots$degree_selection <- results %>%
-    filter(converged == TRUE) %>%
-    ggplot(aes(x = factor(selected_degree))) +
-    geom_bar() +
-    facet_wrap(~scenario) +
-    labs(title = "Selected Polynomial Degree",
-         x = "Degree", y = "Count") +
-    theme_bw()
-  
-  # 4. R² performance
-  plots$r_squared <- results %>%
-    filter(converged == TRUE) %>%
-    ggplot(aes(x = scenario, y = poly_r_squared)) +
-    geom_boxplot() +
-    coord_flip() +
-    labs(title = "R² by Scenario (Polynomial MVMR, Inner Interval)",
-         x = "Scenario", y = "R²") +
-    theme_bw()
-  
-  # 5. Inner vs Full comparison (Polynomial)
-  plots$inner_vs_full <- results %>%
-    filter(converged == TRUE) %>%
-    select(scenario, replicate, poly_mse, poly_mse_full) %>%
-    pivot_longer(cols = c(poly_mse, poly_mse_full),
-                 names_to = "data_type",
-                 values_to = "mse") %>%
-    mutate(data_type = ifelse(data_type == "poly_mse", "Inner Interval", "Full Data")) %>%
-    ggplot(aes(x = scenario, y = mse, fill = data_type)) +
-    geom_boxplot() +
-    coord_flip() +
-    scale_fill_manual(values = c("Inner Interval" = "steelblue", "Full Data" = "coral")) +
-    labs(title = "MSE: Inner Interval vs Full Data (Polynomial MVMR)",
-         x = "Scenario", y = "MSE", fill = "Data Type") +
-    theme_bw() +
-    theme(legend.position = "bottom")
-  
-  # 6. Polynomial vs IVW comparison (Inner Interval)
-  plots$poly_vs_ivw <- results %>%
-    filter(converged == TRUE) %>%
-    select(scenario, replicate, poly_mse, ivw_mse) %>%
-    pivot_longer(cols = c(poly_mse, ivw_mse),
-                 names_to = "method",
-                 values_to = "mse") %>%
-    mutate(method = ifelse(method == "poly_mse", "Polynomial MVMR", "IVW")) %>%
-    ggplot(aes(x = scenario, y = mse, fill = method)) +
-    geom_boxplot() +
-    coord_flip() +
-    scale_fill_manual(values = c("Polynomial MVMR" = "darkgreen", "IVW" = "darkorange")) +
-    labs(title = "MSE: Polynomial MVMR vs Standard IVW (Inner Interval)",
-         x = "Scenario", y = "MSE", fill = "Method") +
-    theme_bw() +
-    theme(legend.position = "bottom")
-  
-  # 7. Method comparison by scenario
-  plots$method_comparison_facet <- results %>%
-    filter(converged == TRUE) %>%
-    select(scenario, replicate, poly_mse, ivw_mse) %>%
-    pivot_longer(cols = c(poly_mse, ivw_mse),
-                 names_to = "method",
-                 values_to = "mse") %>%
-    mutate(method = ifelse(method == "poly_mse", "Polynomial MVMR", "IVW")) %>%
-    ggplot(aes(x = method, y = mse, fill = method)) +
-    geom_boxplot() +
-    facet_wrap(~scenario, scales = "free_y") +
-    scale_fill_manual(values = c("Polynomial MVMR" = "darkgreen", "IVW" = "darkorange")) +
-    labs(title = "MSE Comparison by Scenario",
-         x = "Method", y = "MSE") +
-    theme_bw() +
-    theme(legend.position = "none", axis.text.x = element_text(angle = 45, hjust = 1))
-  
-  return(plots)
-}
-
-# Check for required source file
-if (is.null(opt$source_file)) {
-  stop("Error: --source_file is required. Please provide the path to your simulation functions file.")
-}
-
-if (!file.exists(opt$source_file)) {
-  stop(paste("Error: Source file not found:", opt$source_file))
-}
-
-# Source the functions file
-cat("Sourcing functions from:", opt$source_file, "\n")
-source(opt$source_file)
 
 # Parse comma-separated values into numeric vectors
 prop_int <- as.numeric(strsplit(opt$prop_int, ",")[[1]])
