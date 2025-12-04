@@ -9,7 +9,7 @@
 #' @param set_higher_to_zero Logical. If TRUE, sets all higher-order terms to zero
 #'   once a non-significant term is encountered (default: FALSE).
 #' @param remove_degree_if_no_snps Logical. If TRUE, removes polynomial degrees
-#'   with no significant SNPs (default: FALSE).
+#'   with no significant SNPs (default: TRUE).
 #'
 #' @return A list of final coefficients for each polynomial degree.
 #'
@@ -24,9 +24,9 @@
 #' }
 obtain_final_coeffs <- function(orthogonal_poly_coef,
                                 mvmr_results,
-                                pvalue_threshold,
+                                pvalue_threshold = 0.05,
                                 set_higher_to_zero = FALSE,
-                                remove_degree_if_no_snps = FALSE) {
+                                remove_degree_if_no_snps = TRUE) {
   final_coefficients <- orthogonal_poly_coef
 
   if (mvmr_results$exposure[1] == "Intercept") {
