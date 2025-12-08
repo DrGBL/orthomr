@@ -409,12 +409,16 @@ run_full_simulation_study <- function(inner_interval = 0.90,
         for(n in 1:n_replicates){
 
           cust_thresh<-function(x){
-            cutoff<-runif(1,-10,2)
-            plateau<-runif(1,-10,10)
-            slope<-runif(1,-10,10)
+            cutoff<-runif(n=1,min=-0.5,max=0.5)
+            plateau<-runif(1,-3,3)
+            slope<-runif(1,5,10)
+            # print(cutoff)
+            # print(plateau)
+            # print(slope)
             df<-data.frame(y_bool=(x>cutoff)) %>%
               mutate(y_tmp=plateau+(x-cutoff)*slope) %>%
               mutate(y=ifelse(y_bool, y_tmp, plateau))
+
             return(df %>% pull(y))
           }
 
@@ -711,15 +715,21 @@ plot_simulation_results <- function(results) {
 # Example usage:
 # Run with IVW comparison (default)
 results <- run_full_simulation_study(inner_interval = 0.90, n_replicates=50)
-# results <- run_full_simulation_study(inner_interval = 0.90,
-#                                      n_replicates=1,
-#                                      prop_int=c(0),
-#                                      inst_int=c(30),
-#                                      ss_int=c(10000))
+results <- run_full_simulation_study(inner_interval = 0.90,
+                                     n_replicates=4,
+                                     prop_int=c(0),
+                                     inst_int=c(30),
+                                     ss_int=c(10000))
 
 
 saveRDS(results,"~/Microbiologie/MonLab/mr_non_lineaire/simu_results.RDS")
 results <- readRDS("~/Microbiologie/MonLab/mr_non_lineaire/simu_results.RDS")
+
+
+results <- results %>%
+  mutate(scenario=str_replace(scenario,"_rep_[0-9]*","")) %>%
+  mutate(true_function=str_extract(scenario,"^[A-Za-z]*_")) %>%
+  mutate(true_function=str_replace(true_function,"_",""))
 
 # Get summary statistics
 summary_poly_inner <- summarize_results(results, use_full_data = FALSE, method = "polynomial")

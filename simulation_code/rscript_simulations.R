@@ -437,14 +437,15 @@ run_full_simulation_study <- function(inner_interval = 0.90,
         for(n in 1:n_replicates){
 
           cust_thresh<-function(x){
-            cutoff<-runif(1,-10,2)
-            plateau<-runif(1,-10,10)
-            slope<-runif(1,-10,10)
+            cutoff<-runif(n=1,min=-0.5,max=0.5)
+            plateau<-runif(1,-3,3)
+            slope<-runif(1,5,10)
+            # print(cutoff)
+            # print(plateau)
+            # print(slope)
             df<-data.frame(y_bool=(x>cutoff)) %>%
               mutate(y_tmp=plateau+(x-cutoff)*slope) %>%
               mutate(y=ifelse(y_bool, y_tmp, plateau))
-            return(df %>% pull(y))
-          }
 
           scenarios <- list(
             # Functional forms
