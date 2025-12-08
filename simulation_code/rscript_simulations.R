@@ -53,12 +53,12 @@ run_ivw <- function(sim_data){
       af = sim_data$allele_frequencies[i]
     ))
   }
-  
+
   gwas_filt<-gwas_temp %>%
     filter(pval<5e-8) %>%
     mutate(EA="C") %>%
     mutate(OA="A")
-  
+
   gwas_temp_out <- data.frame()
   for (i in 1:ncol(sim_data$genotypes)) {
     model <- lm(sim_data$simulated_data$outcome_observed ~ sim_data$genotypes[, i])
@@ -70,12 +70,12 @@ run_ivw <- function(sim_data){
       af = sim_data$allele_frequencies[i]
     ))
   }
-  
+
   gwas_filt_out<-gwas_temp_out %>%
     filter(ins %in% gwas_filt$ins) %>%
     mutate(EA="C") %>%
     mutate(OA="A")
-  
+
   mr_exp<-format_data(dat=gwas_filt,
                       type="exposure",
                       snp_col="ins",
@@ -85,7 +85,7 @@ run_ivw <- function(sim_data){
                       eaf_col="af",
                       effect_allele_col = "EA",
                       other_allele_col = "OA")
-  
+
   mr_out<-format_data(dat=gwas_filt_out,
                       type="outcome",
                       snp_col="ins",
@@ -95,11 +95,11 @@ run_ivw <- function(sim_data){
                       eaf_col="af",
                       effect_allele_col = "EA",
                       other_allele_col = "OA")
-  
+
   mr_harm<-harmonise_data(mr_exp,mr_out)
-  
+
   mr_res<-mr(mr_harm,method_list=c("mr_ivw"))
-  
+
   return(mr_res)
 }
 
@@ -130,14 +130,14 @@ run_simulation_scenario <- function(scenario_name,
                                     n_replicates = 20,
                                     inner_interval = 0.90,
                                     compare_ivw = TRUE) {
-  
+
   results_list <- list()
-  
+
   for (rep in 1:n_replicates) {
-    
+
     # Set seed for reproducibility
     #set.seed(1000 + rep)
-    
+
     # Simulate data
     sim_data <- sim_exp_out_non_linear(
       sample_size = sample_size,
@@ -147,7 +147,7 @@ run_simulation_scenario <- function(scenario_name,
       prop_pleiotropic = prop_pleiotropic,
       prop_variance_explained = prop_variance_explained
     )
-    
+
     # Extract variables
     outcome_observed <- sim_data[["simulated_data"]]$outcome_observed
     exposure_observed <- sim_data[["simulated_data"]]$exposure_observed
@@ -155,10 +155,10 @@ run_simulation_scenario <- function(scenario_name,
     exposure_true <- sim_data[["simulated_data"]]$exposure_true
     genotypes <- sim_data[["genotypes"]]
     allele_frequencies <- sim_data[["allele_frequencies"]]
-    
+
     # Create orthogonal polynomials
     poly_result <- orthopol(degree = max_degree, exposure_values = exposure_observed)
-    
+
     # Run GWAS for exposures
     gwas_exposure_list <- list()
     for (j in 1:max_degree) {
@@ -175,7 +175,7 @@ run_simulation_scenario <- function(scenario_name,
       }
       gwas_exposure_list[[j]] <- gwas_temp
     }
-    
+
     # Run GWAS for outcome
     gwas_outcome <- data.frame()
     for (i in 1:ncol(genotypes)) {
@@ -188,10 +188,10 @@ run_simulation_scenario <- function(scenario_name,
         af = allele_frequencies[i]
       ))
     }
-    
+
     # Format for MVMR
     mvmr_exposure_data <- merge_exp_inst(gwas_exposure_list)
-    
+
     mvmr_outcome_data <- gwas_outcome %>%
       filter(ins %in% mvmr_exposure_data$SNP) %>%
       rename(SNP = ins) %>%
@@ -207,7 +207,7 @@ run_simulation_scenario <- function(scenario_name,
         pval.outcome = pval,
         eaf.outcome = af
       )
-    
+
     # Run MR analysis (with error handling)
     tryCatch({
       analysis_results <- mr_sim_res(
@@ -218,13 +218,13 @@ run_simulation_scenario <- function(scenario_name,
         include_intercept = TRUE,
         orthogonal_poly_coef = poly_result$coefficients
       )
-      
+
       # Calculate metrics
       # Limit to inner interval of exposure distribution
       lower_quantile <- (1 - inner_interval) / 2
       upper_quantile <- 1 - lower_quantile
       quantiles <- quantile(exposure_observed, c(lower_quantile, upper_quantile))
-      
+
       analysis_df <- data.frame(
         exposure_true = exposure_true,
         exposure_observed = exposure_observed,
@@ -232,7 +232,7 @@ run_simulation_scenario <- function(scenario_name,
         outcome_observed = outcome_observed
       ) %>%
         filter(exposure_observed >= quantiles[1] & exposure_observed <= quantiles[2])
-      
+
       # Also calculate metrics on full data for comparison
       full_df <- data.frame(
         exposure_true = exposure_true,
@@ -240,31 +240,31 @@ run_simulation_scenario <- function(scenario_name,
         outcome_true = outcome_true,
         outcome_observed = outcome_observed
       )
-      
+
       # Predict outcomes (inner interval)
       predicted_outcome <- predict_mvmr(
         analysis_df$exposure_true,
         analysis_results$polynomial_coefficients
       )
-      
+
       # Predict outcomes (full data)
       predicted_outcome_full <- predict_mvmr(
         full_df$exposure_true,
         analysis_results$polynomial_coefficients
       )
-      
+
       # Calculate metrics on inner interval
       mse <- mean((analysis_df$outcome_true - predicted_outcome)^2)
       mae <- mean(abs(analysis_df$outcome_true - predicted_outcome))
       bias <- mean(analysis_df$outcome_true - predicted_outcome)
       r_squared <- cor(analysis_df$outcome_true, predicted_outcome)^2
-      
+
       # Calculate metrics on full data
       mse_full <- mean((full_df$outcome_true - predicted_outcome_full)^2)
       mae_full <- mean(abs(full_df$outcome_true - predicted_outcome_full))
       bias_full <- mean(full_df$outcome_true - predicted_outcome_full)
       r_squared_full <- cor(full_df$outcome_true, predicted_outcome_full)^2
-      
+
       # IVW predictions (linear only)
       ivw_mse <- NA
       ivw_mae <- NA
@@ -277,34 +277,34 @@ run_simulation_scenario <- function(scenario_name,
       ivw_beta <- NA
       ivw_se <- NA
       ivw_pval <- NA
-      
+
       if (compare_ivw) {
         ivw_results<-run_ivw(sim_data)
-        
+
         ivw_beta <- ivw_results$b[1]
         ivw_se <- ivw_results$se[1]
         ivw_pval <- ivw_results$pval[1]
-        
+
         # Predict using linear IVW estimate
         predicted_ivw <- ivw_beta * analysis_df$exposure_true
         predicted_ivw_full <- ivw_beta * full_df$exposure_true
-        
+
         # Calculate IVW metrics (inner interval)
         ivw_mse <- mean((analysis_df$outcome_true - predicted_ivw)^2)
         ivw_mae <- mean(abs(analysis_df$outcome_true - predicted_ivw))
         ivw_bias <- mean(analysis_df$outcome_true - predicted_ivw)
         ivw_r_squared <- cor(analysis_df$outcome_true, predicted_ivw)^2
-        
+
         # Calculate IVW metrics (full data)
         ivw_mse_full <- mean((full_df$outcome_true - predicted_ivw_full)^2)
         ivw_mae_full <- mean(abs(full_df$outcome_true - predicted_ivw_full))
         ivw_bias_full <- mean(full_df$outcome_true - predicted_ivw_full)
         ivw_r_squared_full <- cor(full_df$outcome_true, predicted_ivw_full)^2
-        
-        
-        
+
+
+
       }
-      
+
       # Calculate bias at different exposure quantiles
       exposure_quintiles <- quantile(analysis_df$exposure_observed, seq(0, 1, 0.2))
       bias_by_quintile <- sapply(1:(length(exposure_quintiles)-1), function(q) {
@@ -316,13 +316,13 @@ run_simulation_scenario <- function(scenario_name,
           NA
         }
       })
-      
+
       # Determine selected degree (count non-zero significant terms)
       selected_degree <- nrow(analysis_results$mvmr_results)
       if("Intercept" %in% analysis_results$mvmr_results$exposure) {
         selected_degree <- selected_degree - 1
       }
-      
+
       # Store results
       results_list[[rep]] <- data.frame(
         scenario = scenario_name,
@@ -366,7 +366,7 @@ run_simulation_scenario <- function(scenario_name,
         n_samples_full = nrow(full_df),
         converged = TRUE
       )
-      
+
     }, error = function(e) {
       results_list[[rep]] <- data.frame(
         scenario = scenario_name,
@@ -405,12 +405,12 @@ run_simulation_scenario <- function(scenario_name,
         converged = FALSE
       )
     })
-    
+
     if(rep %% 10 == 0) {
       message(paste0("Scenario: ", scenario_name, " - Replicate: ", rep, "/", n_replicates))
     }
   }
-  
+
   # Combine results
   return(bind_rows(results_list))
 }
@@ -426,7 +426,7 @@ run_full_simulation_study <- function(inner_interval = 0.90,
                                       prop_int=c(0, 0.1, 0.25, 0.5),
                                       inst_int=c(30, 50),
                                       ss_int=c(10000,25000,50000)) {
-  
+
   all_results <- list()
   for(prop in prop_int) {
     for(n_inst in inst_int) {
@@ -435,7 +435,7 @@ run_full_simulation_study <- function(inner_interval = 0.90,
         message(paste("Running with pleiotropy prop:", prop))
         message(paste("Running with n_instruments:", n_inst))
         for(n in 1:n_replicates){
-          
+
           cust_thresh<-function(x){
             cutoff<-runif(1,-10,2)
             plateau<-runif(1,-10,10)
@@ -445,7 +445,7 @@ run_full_simulation_study <- function(inner_interval = 0.90,
               mutate(y=ifelse(y_bool, y_tmp, plateau))
             return(df %>% pull(y))
           }
-          
+
           scenarios <- list(
             # Functional forms
             linear = list(
@@ -484,7 +484,7 @@ run_full_simulation_study <- function(inner_interval = 0.90,
               true_degree = NA
             )
           )
-          
+
           for(scenario in names(scenarios)) {
             result<-c()
             message(paste0("Running scenario: ", scenarios[[scenario]]$name, ", pleiotropy ", prop*100,"%, n_instruments: ",n_inst, ", ss: ",ss, ", replicate: ",n))
@@ -506,7 +506,7 @@ run_full_simulation_study <- function(inner_interval = 0.90,
               message(paste0("ERROR in scenario", scenarios[[scenario]]$name,"_pleiotropy_",prop,"_n_ins_",n_inst, "_ss_", ss, e$message))
               return(NULL)
             })
-            
+
             if (!is.null(result) && nrow(result) > 0) {
               all_results[[paste0(scenarios[[scenario]]$name,"_pleiotropy_",prop,"_n_ins_",n_inst,"_ss_",ss,"_rep_",n)]] <- result
               message(paste("  -> Success:", nrow(result), "rows"))
@@ -516,24 +516,24 @@ run_full_simulation_study <- function(inner_interval = 0.90,
       }
     }
   }
-  
+
   # Combine all results
   message("=== Combining Results ===")
   if (length(all_results) == 0) {
     warning("No successful simulation scenarios! All failed.")
     return(data.frame())
   }
-  
+
   final_results <- bind_rows(all_results)
   message(paste("Total rows in final results:", nrow(final_results)))
-  
+
   return(final_results)
 }
 
 # Parse comma-separated values into numeric vectors
-prop_int <- as.numeric(strsplit(opt$prop_int, ",")[[1]])
-inst_int <- as.integer(strsplit(opt$inst_int, ",")[[1]])
-ss_int <- as.integer(strsplit(opt$ss_int, ",")[[1]])
+prop_int <- as.numeric(opt$prop_int)
+inst_int <- as.integer(opt$inst_int)
+ss_int <- as.integer(opt$ss_int)
 
 # Print configuration
 cat("=== Simulation Configuration ===\n")

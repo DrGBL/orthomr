@@ -1,84 +1,74 @@
 #!/bin/bash
 #SBATCH --job-name=sim_array
-#SBATCH --output=logs/sim_%A_%a.out
-#SBATCH --error=logs/sim_%A_%a.err
+#SBATCH --output=/scratch/richards/guillaume.butler-laporte/non_linear_mr/simulations/logs/sim_%A_%a.out
+#SBATCH --error=/scratch/richards/guillaume.butler-laporte/non_linear_mr/simulations/logs/sim_%A_%a.err
 #SBATCH --time=24:00:00
 #SBATCH --mem=16G
 #SBATCH --cpus-per-task=1
-#SBATCH --array=0-89
+#SBATCH --array=0-23
 
-source activate myother_env
+source ~/.bashrc
+conda activate r4-env
+
+cd /scratch/richards/guillaume.butler-laporte/non_linear_mr/simulations/
 
 # Create logs directory if it doesn't exist
-mkdir -p logs
 mkdir -p results
 
 # Define parameter arrays
-INNER_INTERVALS=(0.90)
-N_REPLICATES=(50)
-PROP_INTS=("0,0.1,0.25,0.5")
-INST_INTS=("30" "50")
-SS_INTS=("10000" "25000" "50000")
+INNER_INTERVALS=0.90
+N_REPLICATES=50
+PROP_INTS=(0 0.1 0.25 0.5)
+INST_INTS=(30 50)
+SS_INTS=(10000 25000 50000)
 
 # Calculate total number of combinations
-N_INNER=${#INNER_INTERVALS[@]}
-N_REPS=${#N_REPLICATES[@]}
 N_PROP=${#PROP_INTS[@]}
 N_INST=${#INST_INTS[@]}
 N_SS=${#SS_INTS[@]}
 
-TOTAL_JOBS=$((N_INNER * N_REPS * N_PROP * N_INST * N_SS))
+TOTAL_JOBS=$((N_PROP * N_INST * N_SS))
 
-echo "Total job combinations: $TOTAL_JOBS"
-echo "Current array task ID: $SLURM_ARRAY_TASK_ID"
+echo "Total job combinations:" $TOTAL_JOBS
+echo "Current array task ID:" $SLURM_ARRAY_TASK_ID
 
-# Calculate indices for each parameter
-idx=$SLURM_ARRAY_TASK_ID
+# Make new arrays:
 
-ss_idx=$((idx % N_SS))
-idx=$((idx / N_SS))
+new_prop=()
+new_inst=()
+new_ss=()
 
-inst_idx=$((idx % N_INST))
-idx=$((idx / N_INST))
+for v1 in "${PROP_INTS[@]}"; do
+  for v2 in "${INST_INTS[@]}"; do
+    for v3 in "${SS_INTS[@]}"; do
+      new_prop+=("$v1")
+      new_inst+=("$v2")
+      new_ss+=("$v3")
+    done
+  done
+done
 
-prop_idx=$((idx % N_PROP))
-idx=$((idx / N_PROP))
-
-rep_idx=$((idx % N_REPS))
-idx=$((idx / N_REPS))
-
-inner_idx=$((idx % N_INNER))
-
-# Get parameter values
-INNER_INTERVAL=${INNER_INTERVALS[$inner_idx]}
-N_REP=${N_REPLICATES[$rep_idx]}
-PROP_INT=${PROP_INTS[$prop_idx]}
-INST_INT=${INST_INTS[$inst_idx]}
-SS_INT=${SS_INTS[$ss_idx]}
 
 # Create output filename
-OUTPUT_NAME="sim_inner${INNER_INTERVAL}_nrep${N_REP}_inst${INST_INT}_ss${SS_INT}.rds"
+OUTPUT_NAME="sim_inner${INNER_INTERVALS}_nrep${N_REPLICATES}_prop_pleio_${new_prop[$SLURM_ARRAY_TASK_ID]}_inst${new_inst[$SLURM_ARRAY_TASK_ID]}_ss${new_ss[$SLURM_ARRAY_TASK_ID]}.rds"
 
 echo "=========================================="
 echo "Job Configuration:"
-echo "  Inner interval: $INNER_INTERVAL"
-echo "  N replicates: $N_REP"
-echo "  Prop int: $PROP_INT"
-echo "  Instruments: $INST_INT"
-echo "  Sample size: $SS_INT"
+echo "  Inner interval: $INNER_INTERVALS"
+echo "  N replicates: $N_REPLICATES"
+echo "  Prop pleiotropy: ${new_prop[$SLURM_ARRAY_TASK_ID]}"
+echo "  Instruments: ${new_inst[$SLURM_ARRAY_TASK_ID]}"
+echo "  Sample size: ${new_ss[$SLURM_ARRAY_TASK_ID]}"
 echo "  Output: $OUTPUT_NAME"
 echo "=========================================="
 
-# Load R module (adjust based on your cluster)
-module load r/4.3.0  # Adjust this to match your cluster's R module
-
 # Run the simulation
-Rscript run_simulation_cli.R \
-  --inner_interval $INNER_INTERVAL \
-  --n_replicates $N_REP \
-  --prop_int "$PROP_INT" \
-  --inst_int "$INST_INT" \
-  --ss_int "$SS_INT" \
+Rscript /scratch/richards/guillaume.butler-laporte/non_linear_mr/simulations/rscript_simulations.R \
+  --inner_interval $INNER_INTERVALS \
+  --n_replicates $N_REPLICATES \
+  --prop_int "${new_prop[$SLURM_ARRAY_TASK_ID]}" \
+  --inst_int "${new_inst[$SLURM_ARRAY_TASK_ID]}" \
+  --ss_int "${new_ss[$SLURM_ARRAY_TASK_ID]}" \
   --output_dir ./results \
   --output_name "$OUTPUT_NAME"
 
