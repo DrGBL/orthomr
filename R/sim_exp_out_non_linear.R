@@ -115,6 +115,7 @@ sim_exp_out_non_linear <- function(sample_size = 10000,
 
   # Generate true outcome (from true exposure, not observed!)
   outcome_true <- exposure_to_outcome_func(exposure_true)
+  outcome_true <- scale(outcome_true,center=TRUE,scale=FALSE)
 
   # Add error to outcome
   total_variance_outcome <- var(outcome_true)
