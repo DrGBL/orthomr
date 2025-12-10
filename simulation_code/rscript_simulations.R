@@ -11,6 +11,7 @@ library(ggplot2)
 library(tidyr)
 library(purrr)
 library(TwoSampleMR)
+library(DRMR)
 
 
 # Define command-line options
@@ -101,6 +102,65 @@ run_ivw <- function(sim_data){
   mr_res<-mr(mr_harm,method_list=c("mr_ivw"))
 
   return(mr_res)
+}
+
+#' Run doubly-ranked stratification MR
+#'
+#' @param sim_data Simulated data from sim_exp_out_non_linear
+#' @param Ns the number of strata to be built (default = 10)
+#' @param Nordera positive integer value indicates the order to be used for smoothing (default = 3).
+#'
+#' @return Data frame with the true exposures and predicted outcomes based on DSR MR
+run_drs <- function(sim_data,
+                    Ns=10,
+                    Norder=3){
+  baseline<-0
+  datdr<-data.frame(X=sim_data$simulated_data$exposure_observed,
+                    Y=sim_data$simulated_data$outcome_observed)
+  datdr$Z<-lm(datdr$X~sim_data$genotypes)$fitted
+
+  rdat<-Stratify(datdr,Ns=Ns)
+  RES<-getSummaryInf(rdat)
+  smooth_res<-Smooth(RES,Norder=Norder)
+
+
+  Bs <- fda::create.bspline.basis( c(min(sim_data$simulated_data$exposure_observed),
+                                     max(sim_data$simulated_data$exposure_observed)),
+                                   breaks=c(  min(sim_data$simulated_data$exposure_observed),
+                                              logical(0) ,  max(sim_data$simulated_data$exposure_observed)),
+                                   norder=Norder )
+
+  out_diff_pred_tmp<-fda::eval.basis(sim_data$simulated_data$exposure_true,
+                                     Bs)
+
+  thetahat <- smooth_res$thetahat
+  out_diff_pred <- out_diff_pred_tmp %*% thetahat
+
+  # plot(sim_data$simulated_data$exposure_true,
+  #      out_diff_pred)
+
+
+  #plot(sim_data$simulated_data$exposure_true,sim_data$simulated_data$outcome_true)
+
+  df_pred<-data.frame(exp_true=sim_data$simulated_data$exposure_true,
+                      exp_observed=sim_data$simulated_data$exposure_observed,
+                      out_diff=out_diff_pred,
+                      out_true=sim_data$simulated_data$outcome_true) %>%
+    arrange(exp_true)
+
+  df_pred$out_pred <- cumsum(
+    c(0, diff(df_pred$exp_true)) * (df_pred$out_diff[-1] + df_pred$out_diff[-nrow(df_pred)]) / 2
+  )
+
+  baseline<-df_pred$out_pred[sum(df_pred$exp_true<=0)]
+
+  df_pred$out_pred<-df_pred$out_pred-baseline
+
+  #plot(df_pred$exp_true,df_pred$out_pred)
+  #plot(df_pred$out_true,df_pred$out_pred)
+  #summary(lm((df_pred$out_true~df_pred$out_pred)))
+
+  return(df_pred)
 }
 
 
@@ -305,6 +365,35 @@ run_simulation_scenario <- function(scenario_name,
 
       }
 
+      # DRS predictions
+      drs_mse <- NA
+      drs_mae <- NA
+      drs_bias <- NA
+      drs_r_squared <- NA
+      drs_mse_full <- NA
+      drs_mae_full <- NA
+      drs_bias_full <- NA
+      drs_r_squared_full <- NA
+
+      if (compare_drs) {
+        drs_results<-run_drs(sim_data)
+
+        # Calculate drs metrics (full data)
+        drs_mse_full <- mean((drs_results$out_true - drs_results$out_pred)^2)
+        drs_mae_full <- mean(abs(drs_results$out_true - drs_results$out_pred))
+        drs_bias_full <- mean(drs_results$out_true - drs_results$out_pred)
+        drs_r_squared_full <- cor(drs_results$out_true, drs_results$out_pred)^2
+
+
+        drs_results_inner<-drs_results %>%
+          filter(exp_observed >= quantiles[1] & exp_observed <= quantiles[2])
+        # Calculate drs metrics (inner interval)
+        drs_mse <- mean((drs_results_inner$out_true - drs_results_inner$out_pred)^2)
+        drs_mae <- mean(abs(drs_results_inner$out_true - drs_results_inner$out_pred))
+        drs_bias <- mean(drs_results_inner$out_true - drs_results_inner$out_pred)
+        drs_r_squared <- cor(drs_results_inner$out_true, drs_results_inner$out_pred)^2
+      }
+
       # Calculate bias at different exposure quantiles
       exposure_quintiles <- quantile(analysis_df$exposure_observed, seq(0, 1, 0.2))
       bias_by_quintile <- sapply(1:(length(exposure_quintiles)-1), function(q) {
@@ -354,6 +443,16 @@ run_simulation_scenario <- function(scenario_name,
         ivw_beta = ivw_beta,
         ivw_se = ivw_se,
         ivw_pval = ivw_pval,
+        # DRS: Inner interval metrics
+        drs_mse = drs_mse,
+        drs_mae = drs_mae,
+        drs_bias = drs_bias,
+        drs_r_squared = drs_r_squared,
+        # DRS: Full data metrics
+        drs_mse_full = drs_mse_full,
+        drs_mae_full = drs_mae_full,
+        drs_bias_full = drs_bias_full,
+        drs_r_squared_full = drs_r_squared_full,
         # Other metrics
         selected_degree = selected_degree,
         bias_q1 = bias_by_quintile[1],
@@ -393,6 +492,14 @@ run_simulation_scenario <- function(scenario_name,
         ivw_beta = NA,
         ivw_se = NA,
         ivw_pval = NA,
+        drs_mse = NA,
+        drs_mae = NA,
+        drs_bias = NA,
+        drs_r_squared = NA,
+        drs_mse_full = NA,
+        drs_mae_full = NA,
+        drs_bias_full = NA,
+        drs_r_squared_full = NA,
         selected_degree = NA,
         bias_q1 = NA,
         bias_q2 = NA,
@@ -499,7 +606,8 @@ run_full_simulation_study <- function(inner_interval = 0.90,
                 n_instruments = n_inst,
                 n_replicates = 1,
                 inner_interval = inner_interval,
-                compare_ivw = TRUE
+                compare_ivw = TRUE,
+                compare_drs = TRUE,
               ) %>%
                 mutate(prop_pleio=prop) %>%
                 bind_rows(result,.)
@@ -529,6 +637,7 @@ run_full_simulation_study <- function(inner_interval = 0.90,
   message(paste("Total rows in final results:", nrow(final_results)))
 
   return(final_results)
+  }
 }
 
 # Parse comma-separated values into numeric vectors
