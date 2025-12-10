@@ -189,7 +189,8 @@ run_simulation_scenario <- function(scenario_name,
                                     prop_variance_explained = 0.5,
                                     n_replicates = 20,
                                     inner_interval = 0.90,
-                                    compare_ivw = TRUE) {
+                                    compare_ivw = TRUE,
+                                    compare_drs = TRUE) {
 
   results_list <- list()
 
@@ -554,6 +555,9 @@ run_full_simulation_study <- function(inner_interval = 0.90,
               mutate(y_tmp=plateau+(x-cutoff)*slope) %>%
               mutate(y=ifelse(y_bool, y_tmp, plateau))
 
+            return(df %>% pull(y))
+          }
+
           scenarios <- list(
             # Functional forms
             linear = list(
@@ -607,7 +611,7 @@ run_full_simulation_study <- function(inner_interval = 0.90,
                 n_replicates = 1,
                 inner_interval = inner_interval,
                 compare_ivw = TRUE,
-                compare_drs = TRUE,
+                compare_drs = TRUE
               ) %>%
                 mutate(prop_pleio=prop) %>%
                 bind_rows(result,.)
@@ -637,8 +641,8 @@ run_full_simulation_study <- function(inner_interval = 0.90,
   message(paste("Total rows in final results:", nrow(final_results)))
 
   return(final_results)
-  }
 }
+
 
 # Parse comma-separated values into numeric vectors
 prop_int <- as.numeric(opt$prop_int)
